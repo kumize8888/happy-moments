@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f2ec">
+  <meta name="description" content="日々の出来事を、自分で決めたポイントと一緒に記録する小さなボックス。">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>小さな幸せボックス</title>
+  <style>
+    :root { color-scheme: light; --ink:#343832; --muted:#85877f; --line:#e7e4dc; --paper:#fffefa; --bg:#f5f2ec; --accent:#78836e; --accent-dark:#5e6b55; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; }
+    main { width:min(100%,620px); margin:0 auto; padding:26px 19px 44px; }
+    header { text-align:center; padding:12px 0 24px; }
+    .eyebrow { color:var(--muted); font-size:11px; letter-spacing:.18em; }
+    h1 { font-size:25px; font-weight:500; letter-spacing:.08em; margin:8px 0 4px; }
+    .subtitle { color:var(--muted); font-size:12px; }
+    .summary { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:20px 18px; display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:center; }
+    .summary .cell + .cell { border-left:1px solid var(--line); }
+    .caption { color:var(--muted); font-size:12px; letter-spacing:.06em; }
+    .number { font-size:31px; font-weight:500; margin-top:5px; font-variant-numeric:tabular-nums; }
+    .unit { font-size:12px; color:var(--muted); margin-left:4px; }
+    section { margin-top:23px; }
+    h2 { font-size:14px; font-weight:600; letter-spacing:.08em; margin:0 0 12px; }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:17px; }
+    .mic { width:100%; border:0; border-radius:13px; padding:15px; background:var(--accent); color:white; font-size:15px; letter-spacing:.04em; cursor:pointer; }
+    .mic:disabled { opacity:.55; }
+    .mic.listening { background:#a45f50; }
+    .status { min-height:22px; margin:8px 2px 10px; color:var(--muted); font-size:12px; text-align:center; }
+    label { display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; }
+    textarea, input { width:100%; border:1px solid var(--line); background:#fff; border-radius:10px; padding:12px; font:inherit; color:var(--ink); outline:none; }
+    textarea { min-height:104px; resize:vertical; line-height:1.65; }
+    input[type=number] { font-size:18px; font-variant-numeric:tabular-nums; }
+    textarea:focus, input:focus { border-color:var(--accent); }
+    .save { width:100%; margin-top:15px; padding:13px; border:0; border-radius:11px; background:#343832; color:white; font-size:14px; cursor:pointer; }
+    .hint { color:var(--muted); font-size:11px; line-height:1.6; margin:10px 2px 0; }
+    .list-head { display:flex; align-items:center; justify-content:space-between; }
+    .list-head h2 { margin:0 0 12px; }
+    .entries { display:flex; flex-direction:column; gap:9px; }
+    .entry { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:13px 14px; }
+    .entry-top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .date { color:var(--muted); font-size:11px; }
+    .points { font-size:15px; font-weight:600; white-space:nowrap; }
+    .entry-text { margin-top:7px; font-size:14px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .delete { margin-top:9px; border:0; background:transparent; color:#9a817a; font-size:11px; padding:3px 0; cursor:pointer; }
+    .empty { color:var(--muted); text-align:center; padding:25px 10px; font-size:13px; }
+    .tools { display:flex; gap:8px; flex-wrap:wrap; }
+    .tool { border:1px solid var(--line); background:var(--paper); border-radius:10px; padding:9px 12px; color:var(--ink); font-size:12px; cursor:pointer; }
+    #importFile { display:none; }
+    footer { text-align:center; color:#a0a096; font-size:10px; margin-top:28px; line-height:1.7; }
+    @media (min-width:520px) { main { padding-top:38px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">MY DAILY MOMENTS</div>
+    <h1>小さな幸せボックス</h1>
+    <div class="subtitle">日々の出来事を、自分のポイントで。</div>
+  </header>
+
+  <div class="summary" aria-live="polite">
+    <div class="cell"><div class="caption">累計ポイント</div><div class="number" id="total">0<span class="unit">pt</span></div></div>
+    <div class="cell"><div class="caption">今日のポイント</div><div class="number" id="today">0<span class="unit">pt</span></div></div>
+  </div>
+
+  <section>
+    <h2>今日の出来事を記録</h2>
+    <div class="panel">
+      <button class="mic" id="micButton" type="button">🎙 音声で記録する</button>
+      <div class="status" id="status" aria-live="polite">ボタンを押して、出来事を話してください。</div>
+      <label for="eventText">出来事</label>
+      <textarea id="eventText" placeholder="ここに出来事を入力、または音声で話してください。"></textarea>
+      <label for="pointsInput">自分で決めるポイント</label>
+      <input id="pointsInput" type="number" inputmode="numeric" step="1" placeholder="例：20">
+      <button class="save" id="saveButton" type="button">この内容で保存する</button>
+      <p class="hint">音声入力の文字は、保存前に自由に直せます。ポイントも自分で決めてください。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="list-head"><h2>これまでの記録</h2></div>
+    <div class="entries" id="entries"><div class="empty">まだ記録はありません。</div></div>
+  </section>
+
+  <section>
+    <h2>データのバックアップ</h2>
+    <div class="panel">
+      <div class="tools">
+        <button class="tool" id="exportButton" type="button">記録をバックアップ</button>
+        <button class="tool" id="importButton" type="button">バックアップを読み込む</button>
+        <input id="importFile" type="file" accept="application/json,.json">
+      </div>
+      <p class="hint">記録はこの端末のブラウザ内に保存されます。機種変更やブラウザのデータ削除に備えて、ときどきバックアップを保存してください。読み込みは現在の記録に追加します。</p>
+    </div>
+  </section>
+
+  <footer>記録する内容も、ポイントも、すべてあなた自身が決めるボックスです。</footer>
+</main>
+<script>
+(() => {
+  const STORAGE_KEY = "chiisana-shiawase-box-v1";
+  const $ = id => document.getElementById(id);
+  let entries = [];
+  try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); if (!Array.isArray(entries)) entries = []; }
+  catch (_) { entries = []; }
+
+  const saveData = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  const fmt = n => Number(n).toLocaleString("ja-JP");
+  const dateKey = d => {
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  };
+  const render = () => {
+    const todayKey = dateKey(new Date());
+    const total = entries.reduce((s,e)=>s+Number(e.points||0),0);
+    const today = entries.filter(e=>dateKey(new Date(e.createdAt))===todayKey).reduce((s,e)=>s+Number(e.points||0),0);
+    $("total").innerHTML = `${fmt(total)}<span class="unit">pt</span>`;
+    $("today").innerHTML = `${fmt(today)}<span class="unit">pt</span>`;
+    const root=$("entries");
+    if (!entries.length) { root.innerHTML='<div class="empty">まだ記録はありません。</div>'; return; }
+    root.replaceChildren();
+    [...entries].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).forEach(e=>{
+      const card=document.createElement("article"); card.className="entry";
+      const top=document.createElement("div"); top.className="entry-top";
+      const date=document.createElement("div"); date.className="date";
+      date.textContent=new Date(e.createdAt).toLocaleString("ja-JP",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+      const pts=document.createElement("div"); pts.className="points"; pts.textContent=`${fmt(e.points)} pt`;
+      top.append(date,pts);
+      const body=document.createElement("div"); body.className="entry-text"; body.textContent=e.text;
+      const del=document.createElement("button"); del.className="delete"; del.type="button"; del.textContent="この記録を削除";
+      del.addEventListener("click",()=>{ if(confirm("この記録を削除しますか？")) { entries=entries.filter(x=>x.id!==e.id); saveData(); render(); }});
+      card.append(top,body,del); root.append(card);
+    });
+  };
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = "ja-JP";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onstart = () => { listening=true; $("micButton").classList.add("listening"); $("micButton").textContent="■ 音声入力を終了する"; $("status").textContent="聞き取っています。話し終えたらボタンを押してください。"; };
+    recognition.onresult = event => {
+      let finalText="", interim="";
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        const t=event.results[i][0].transcript;
+        if(event.results[i].isFinal) finalText+=t;
+        else interim+=t;
+      }
+      if(finalText) $("eventText").value += finalText;
+      $("status").textContent = interim ? `聞き取り中：${interim}` : "音声を文字にしています。";
+    };
+    recognition.onerror = event => {
+      $("status").textContent = event.error==="not-allowed" ? "マイクの使用が許可されていません。ブラウザの設定でマイクを許可してください。" : `音声入力でエラーが発生しました（${event.error}）。もう一度お試しください。`;
+    };
+    recognition.onend = () => { listening=false; $("micButton").classList.remove("listening"); $("micButton").textContent="🎙 音声で記録する"; if($("status").textContent.startsWith("聞き取っています")) $("status").textContent="音声入力が終了しました。内容を確認してください。"; };
+    $("micButton").addEventListener("click",()=>{
+      if(listening) recognition.stop();
+      else { try { recognition.start(); } catch(_) { $("status").textContent="音声入力を開始できませんでした。少し待ってから再度お試しください。"; } }
+    });
+  } else {
+    $("micButton").addEventListener("click",()=>{
+      $("status").textContent="このブラウザでは音声入力に対応していないようです。Chromeで開いてお試しください。";
+    });
+  }
+
+  $("saveButton").addEventListener("click",()=>{
+    const text=$("eventText").value.trim();
+    const raw=$("pointsInput").value.trim();
+    if(!text) { alert("出来事を入力してください。"); $("eventText").focus(); return; }
+    if(raw==="" || !Number.isFinite(Number(raw))) { alert("自分で決めたポイントを入力してください。"); $("pointsInput").focus(); return; }
+    entries.push({id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()), text, points:Number(raw), createdAt:new Date().toISOString()});
+    saveData(); $("eventText").value=""; $("pointsInput").value=""; $("status").textContent="保存しました。"; render();
+  });
+
+  $("exportButton").addEventListener("click",()=>{
+    const blob=new Blob([JSON.stringify({app:"小さな幸せボックス",version:1,exportedAt:new Date().toISOString(),entries},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`小さな幸せボックス_backup_${dateKey(new Date())}.json`; a.click(); URL.revokeObjectURL(url);
+  });
+  $("importButton").addEventListener("click",()=>$("importFile").click());
+  $("importFile").addEventListener("change",async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    try {
+      const parsed=JSON.parse(await file.text());
+      const incoming=Array.isArray(parsed)?parsed:parsed.entries;
+      if(!Array.isArray(incoming)) throw new Error("invalid");
+      const known=new Set(entries.map(x=>x.id));
+      let added=0;
+      for(const item of incoming){
+        if(item && typeof item.text==="string" && Number.isFinite(Number(item.points)) && item.createdAt && !known.has(item.id)){
+          entries.push({id:item.id || String(Date.now())+Math.random(),text:item.text,points:Number(item.points),createdAt:item.createdAt}); added++;
+        }
+      }
+      saveData(); render(); alert(`${added}件の記録を追加しました。`);
+    } catch(_) { alert("このバックアップファイルは読み込めませんでした。"); }
+    e.target.value="";
+  });
+
+  if("serviceWorker" in navigator && location.protocol!=="file:") {
+    window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+  }
+  render();
+})();
+</script>
+</body>
+</html>
